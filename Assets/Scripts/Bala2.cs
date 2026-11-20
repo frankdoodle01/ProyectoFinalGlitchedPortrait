@@ -2,22 +2,39 @@ using UnityEngine;
 
 public class Bala2 : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public float velocidad = 32f;
+
     void Start()
     {
-        
+        // Destruye la bala automáticamente después de 3 segundos si no choca con nada
+        Destroy(gameObject, 3f);
     }
 
-    // Update is called once per frame
     void Update()
     {
-        this.transform.Translate(Vector3.forward * Time.deltaTime * 32);
-        Debug.DrawRay(this.transform.position, this.transform.TransformDirection(Vector3.forward), Color.red);
+        float distanciaAvance = velocidad * Time.deltaTime;
+        Debug.DrawRay(transform.position, transform.forward * distanciaAvance, Color.red);
 
-        if (Physics.Raycast(this.transform.position, this.transform.TransformDirection(Vector3.forward), 1))
+        RaycastHit hit;
+        // Detecta colisiones en la trayectoria de este frame
+        if (Physics.Raycast(transform.position, transform.forward, out hit, distanciaAvance + 0.5f))
         {
-            Destroy(this.gameObject);
+            if (hit.collider.CompareTag("Enemigo"))
+            {
+                // Sumar al contador del Canvas
+                if (GameManager.instancia != null)
+                {
+                    GameManager.instancia.SumarPunto();
+                }
+
+                // Destruir al enemigo
+                Destroy(hit.collider.gameObject);
+            }
+
+            // Destruir la bala al impactar cualquier objeto
+            Destroy(gameObject);
         }
 
+        transform.Translate(Vector3.forward * distanciaAvance);
     }
 }

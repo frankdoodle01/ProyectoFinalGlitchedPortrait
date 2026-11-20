@@ -1,5 +1,3 @@
-
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,9 +21,8 @@ public class Jugador : MonoBehaviour
     public Transform lugarDisparo;
 
     void Start()
-    {x
+    {
         characterController = GetComponent<CharacterController>();
-
         componenteAnimator = objetoModelo.GetComponent<Animator>();
 
         velocidad = Vector3.zero;
@@ -36,17 +33,16 @@ public class Jugador : MonoBehaviour
         camara = Camera.main.transform;
         componenteCamara = Camera.main;
 
-        auxiliarCamara = new GameObject();
-    }3
-      
+        auxiliarCamara = new GameObject("AuxiliarCamara");
+    }
+
     void Update()
     {
-        // Leer movimiento
+        // Leer movimiento (WASD viene configurado por defecto en "Move")
         inputMovimiento = playerInput.actions["Move"].ReadValue<Vector2>();
 
-        // Leer Sprint (botón)
+        // Leer Sprint
         bool sprint = playerInput.actions["Sprint"].IsPressed();
-
         bool sprinting = sprint && inputMovimiento.magnitude > 0.1f;
 
         // Animaciones
@@ -58,54 +54,42 @@ public class Jugador : MonoBehaviour
         velocidad.x = inputMovimiento.x * velocidadMovimiento;
         velocidad.z = inputMovimiento.y * velocidadMovimiento;
 
-
+        // Aplicar gravedad simple si no está en el suelo
+        if (!characterController.isGrounded)
+        {
+            velocidad.y -= 9.81f * Time.deltaTime;
+        }
+        else
+        {
+            velocidad.y = -0.5f;
+        }
 
         // Movimiento relativo a la cámara
         auxiliarCamara.transform.rotation = Quaternion.Euler(0, camara.transform.rotation.eulerAngles.y, 0);
-
         characterController.Move(auxiliarCamara.transform.TransformDirection(velocidad) * Time.deltaTime);
 
         Vector3 movimientoMundo = auxiliarCamara.transform.TransformDirection(new Vector3(inputMovimiento.x, 0, inputMovimiento.y));
         Vector3 movimientoLocal = transform.InverseTransformDirection(movimientoMundo);
 
-        componenteAnimator.SetFloat(
-            "Horizontal",
-            movimientoLocal.x,
-            0.1f,
-            Time.deltaTime
-        );
+        componenteAnimator.SetFloat("Horizontal", movimientoLocal.x, 0.1f, Time.deltaTime);
+        componenteAnimator.SetFloat("Vertical", movimientoLocal.z, 0.1f, Time.deltaTime);
 
-        componenteAnimator.SetFloat(
-            "Vertical",
-            movimientoLocal.z,
-            0.1f,
-            Time.deltaTime
-        );
         // Apuntar hacia el mouse
-        Ray ray =componenteCamara.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Ray ray = componenteCamara.ScreenPointToRay(Mouse.current.position.ReadValue());
         RaycastHit raycastHit;
 
-        if (componenteAnimator.GetCurrentAnimatorStateInfo(0).IsName("Melee"))
+        if (Physics.Raycast(ray, out raycastHit, Mathf.Infinity))
         {
-            if (Physics.Raycast(ray, out raycastHit, Mathf.Infinity))
-            {
-                Debug.Log(raycastHit.point);
-
-                Vector3 mira = raycastHit.point;
-                mira.y = transform.position.y;
-
-                transform.LookAt(mira);
-            }
+            Vector3 mira = raycastHit.point;
+            mira.y = transform.position.y;
+            transform.LookAt(mira);
         }
-        
 
-        // Ataque
+        // Ataque (Disparo)
         if (playerInput.actions["Attack"].WasPressedThisFrame())
         {
             componenteAnimator.SetTrigger("Melee");
-
             Instantiate(prefabBala, lugarDisparo.position, transform.rotation);
         }
-
     }
 }
